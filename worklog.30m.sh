@@ -2,7 +2,7 @@
 set -uo pipefail
 export PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin
 
-CONFIG="${WORKLOG_NUDGE_CONFIG:-$HOME/.config/worklog-nudge/config.env}"
+CONFIG="${JIRA_WORKLOG_NUDGE_CONFIG:-$HOME/.config/jira-worklog-nudge/config.env}"
 [ -f "$CONFIG" ] && . "$CONFIG"
 
 : "${JIRA_SITE:=}"
@@ -13,7 +13,7 @@ CONFIG="${WORKLOG_NUDGE_CONFIG:-$HOME/.config/worklog-nudge/config.env}"
 : "${ALERT_MAX_PER_DAY:=3}"
 : "${ALERT_LAST_HOUR:=20}"
 : "${MAX_ROWS:=5}"
-: "${STATE_DIR:=$HOME/.local/state/worklog-nudge}"
+: "${STATE_DIR:=$HOME/.local/state/jira-worklog-nudge}"
 : "${LOG_COMMAND:=}"
 
 mkdir -p "$STATE_DIR"

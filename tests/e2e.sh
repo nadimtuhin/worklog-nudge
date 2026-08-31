@@ -1,6 +1,6 @@
 #!/bin/bash
 P="$(cd "$(dirname "$0")/.." && pwd)/worklog.30m.sh"
-C="${STATE_DIR:-$HOME/.local/state/worklog-nudge}/cache.json"
+C="${STATE_DIR:-$HOME/.local/state/jira-worklog-nudge}/cache.json"
 fail=0
 ok(){ echo "PASS $1"; }; no(){ echo "FAIL $1: $2"; fail=1; }
 

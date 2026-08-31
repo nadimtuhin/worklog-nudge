@@ -1,4 +1,4 @@
-# worklog-nudge
+# jira-worklog-nudge
 
 A macOS menu bar item that tells you how long it has been since you last logged
 time in Jira, and lets you jump straight to the ticket you should log it against.
@@ -47,12 +47,12 @@ Everything is read-only against Jira. The plugin never writes a worklog itself.
 ## Install
 
 ```bash
-git clone https://github.com/nadimtuhin/worklog-nudge.git
-cd worklog-nudge
+git clone https://github.com/nadimtuhin/jira-worklog-nudge.git
+cd jira-worklog-nudge
 
-mkdir -p ~/.config/worklog-nudge
-cp config.env.example ~/.config/worklog-nudge/config.env
-$EDITOR ~/.config/worklog-nudge/config.env      # set JIRA_SITE and JIRA_EMAIL
+mkdir -p ~/.config/jira-worklog-nudge
+cp config.env.example ~/.config/jira-worklog-nudge/config.env
+$EDITOR ~/.config/jira-worklog-nudge/config.env      # set JIRA_SITE and JIRA_EMAIL
 
 mkdir -p ~/.swiftbar-plugins
 cp worklog.30m.sh ~/.swiftbar-plugins/
@@ -69,7 +69,7 @@ a tighter loop. The interval is the only scheduler; there is no cron or launchd.
 
 ## Configuration
 
-`~/.config/worklog-nudge/config.env`:
+`~/.config/jira-worklog-nudge/config.env`:
 
 | Variable | Default | Meaning |
 |---|---|---|
@@ -92,7 +92,7 @@ With the defaults you get at most three a day, at least three hours apart, none
 after 20:00 — so a typical under-logged day nudges you around 14:00, 17:00 and
 20:00. They stop entirely once you have logged `DAILY_TARGET_HOURS`.
 
-State lives in `~/.local/state/worklog-nudge/alerts-YYYY-MM-DD`, one file per day,
+State lives in `~/.local/state/jira-worklog-nudge/alerts-YYYY-MM-DD`, one file per day,
 holding the count and the last alert time. Delete it to reset the day.
 
 macOS will ask SwiftBar for notification permission the first time one fires.
