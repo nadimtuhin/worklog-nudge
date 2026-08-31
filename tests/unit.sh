@@ -60,4 +60,10 @@ printf '3 0\n' > "$ALERTS"; should_alert 20000 0 && no alert-daily-cap "exceeded
 printf '0 0\n' > "$ALERTS"; ALERT_LAST_HOUR=0; should_alert 20000 0 && no alert-after-hours "fired past cutoff" || ok alert-after-hours
 rm -rf "$STATE_DIR"
 
+I="$(dirname "$0")/../install.sh"
+bash -n "$I" && ok installer-syntax || no installer-syntax "syntax error"
+grep -q 'brew install --cask swiftbar' "$I" && ok installer-swiftbar || no installer-swiftbar "no swiftbar install"
+grep -q 'acli jira auth login' "$I" && ok installer-login || no installer-login "no login step"
+grep -q 'open -a SwiftBar' "$I" && ok installer-starts-app || no installer-starts-app "does not start app"
+
 exit $fail
