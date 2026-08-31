@@ -46,6 +46,21 @@ Everything is read-only against Jira. The plugin never writes a worklog itself.
 
 ## Install
 
+One command — installs Homebrew, `jq`, `acli` and SwiftBar if they are missing, logs
+you in to Jira if you are not already, writes the config from your `acli` account and
+starts the app:
+
+```bash
+git clone https://github.com/nadimtuhin/jira-worklog-nudge.git
+cd jira-worklog-nudge
+./install.sh
+```
+
+It is safe to re-run: anything already installed is skipped, and an existing
+config is left alone.
+
+### Manual install
+
 ```bash
 git clone https://github.com/nadimtuhin/jira-worklog-nudge.git
 cd jira-worklog-nudge
