@@ -13,6 +13,7 @@ CONFIG="${JIRA_WORKLOG_NUDGE_CONFIG:-$HOME/.config/jira-worklog-nudge/config.env
 : "${ALERT_MAX_PER_DAY:=3}"
 : "${ALERT_LAST_HOUR:=20}"
 : "${MAX_ROWS:=5}"
+: "${WORKDAY_START:=09:00}"
 : "${STATE_DIR:=$HOME/.local/state/jira-worklog-nudge}"
 : "${LOG_COMMAND:=}"
 
@@ -28,48 +29,36 @@ keys_with_worklogs() {
     | jq -r '.[]?.key' 2>/dev/null
 }
 
-my_slices() {
-  acli jira workitem view "$1" --fields worklog --json 2>/dev/null \
-    | jq -r --arg me "$JIRA_EMAIL" '.fields.worklog.worklogs[]?
-        | select(.author.emailAddress==$me)
-        | "\(.started|sub("\\.[0-9]+";"")) \(.timeSpentSeconds)"' 2>/dev/null
-}
-
-truncated() {
-  acli jira workitem view "$1" --fields worklog --json 2>/dev/null \
-    | jq -r 'if (.fields.worklog.total // 0) > 20 then "yes" else "no" end' 2>/dev/null
+all_slices() {
+  local f
+  f=$(mktemp)
+  printf '%s' '(if (.fields.worklog.total // 0) > 20 then "TRUNCATED 0" else empty end), (.fields.worklog.worklogs[]? | select(.author.emailAddress==$me) | "\(.started|sub("[.][0-9]+";"")) \(.timeSpentSeconds)")' > "$f"
+  keys_with_worklogs '-14d' \
+    | JQ_FILTER="$f" ME="$JIRA_EMAIL" xargs -P 8 -I{} sh -c \
+      'acli jira workitem view "$1" --fields worklog --json 2>/dev/null | jq -r --arg me "$ME" -f "$JQ_FILTER"' _ {}
+  rm -f "$f"
 }
 
 start_of_today() { date '+%Y-%m-%dT00:00:00%z'; }
 
 epoch_of() { date -j -f '%Y-%m-%dT%H:%M:%S%z' "$1" +%s 2>/dev/null; }
 
-logged_today_seconds() {
-  local total=0 k line secs
-  for k in $(keys_with_worklogs 'startOfDay()'); do
-    while read -r line; do
-      secs=${line##* }
-      [ -n "$secs" ] && total=$((total + secs))
-    done < <(my_slices "$k" | awk -v d="$(date +%Y-%m-%d)" '$0 ~ d')
-  done
-  echo "$total"
+slice_end() {
+  local slices=$1 best e
+  echo "$slices" | grep -q TRUNCATED && { epoch_of "$(start_of_today)"; return; }
+  best=$(echo "$slices" | sort | tail -1)
+  [ -z "$best" ] && { epoch_of "$(start_of_today)"; return; }
+  e=$(epoch_of "${best% *}")
+  if [ -z "$e" ]; then epoch_of "$(start_of_today)"; else echo $(( e + ${best##* } )); fi
 }
 
-last_slice_end() {
-  local k best="" trunc=no last started secs e
-  for k in $(keys_with_worklogs '-7d'); do
-    [ "$(truncated "$k")" = yes ] && trunc=yes
-    last=$(my_slices "$k" | sort | tail -1)
-    [ -n "$last" ] && [ "$last" \> "$best" ] && best=$last
-  done
-  if [ "$trunc" = yes ] || [ -z "$best" ]; then
-    epoch_of "$(start_of_today)"
-    return
-  fi
-  started=${best% *}; secs=${best##* }
-  e=$(epoch_of "$started")
-  if [ -z "$e" ]; then epoch_of "$(start_of_today)"; else echo $((e + secs)); fi
+logged_on() { echo "$1" | awk -v d="$2" 'index($1,d)==1 {t+=$2} END{print t+0}'; }
+
+day_totals_from() {
+  echo "$1" | grep -v TRUNCATED \
+    | awk '{d[substr($1,1,10)]+=$2} END{for (k in d) print k"\t"d[k]}' | sort -r
 }
+
 
 candidates() {
   local out tmp
@@ -84,14 +73,6 @@ candidates() {
   rm -f "$tmp"
 }
 
-day_totals() {
-  local tmp
-  tmp=$(mktemp)
-  keys_with_worklogs '-14d' | xargs -P 8 -I{} sh -c \
-    'acli jira workitem view {} --fields worklog --json 2>/dev/null | jq -r --arg me "'"$JIRA_EMAIL"'" ".fields.worklog.worklogs[]? | select(.author.emailAddress==\$me) | \"\(.started[0:10]) \(.timeSpentSeconds)\""' > "$tmp"
-  awk '{d[$1]+=$2} END{for (k in d) print k"\t"d[k]}' "$tmp" | sort -r
-  rm -f "$tmp"
-}
 
 sprint_window() {
   acli jira workitem view "$1" --fields customfield_10020 --json 2>/dev/null \
@@ -154,8 +135,11 @@ menu_controls() {
 }
 
 render() {
-  local end=$1 logged=$2 cands=$3 days=${4:-} sprint=${5:-} elapsed sessions key summary
+  local end=$1 logged=$2 cands=$3 days=${4:-} sprint=${5:-} elapsed sessions key summary day_start
+  day_start=$(date -j -f '%Y-%m-%d %H:%M' "$(date +%Y-%m-%d) $WORKDAY_START" +%s 2>/dev/null)
+  [ -n "$day_start" ] && [ "$end" -lt "$day_start" ] && end=$day_start
   elapsed=$(( $(date +%s) - end ))
+  [ "$elapsed" -lt 0 ] && elapsed=0
   if [ "$logged" -ge "$DAILY_TARGET_SECONDS" ] || [ "$elapsed" -lt "$NUDGE_AFTER_SECONDS" ]; then
     echo "⏱ | color=#808080"
   else
@@ -188,11 +172,12 @@ render() {
 }
 
 refresh_cache() {
-  local end logged cands days sprint
-  end=$(last_slice_end)
-  logged=$(logged_today_seconds)
+  local end logged cands days sprint slices
+  slices=$(all_slices)
+  end=$(slice_end "$slices")
+  logged=$(logged_on "$slices" "$(date +%Y-%m-%d)")
   cands=$(candidates)
-  days=$(day_totals)
+  days=$(day_totals_from "$slices")
   sprint=$(sprint_window "$(echo "$cands" | head -1 | cut -f1)")
   [ -n "$end" ] && [ -n "$cands" ] && \
     jq -n --arg end "$end" --arg logged "$logged" --arg cands "$cands" \

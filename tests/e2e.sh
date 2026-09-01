@@ -14,7 +14,7 @@ mv "$C" /tmp/cache.bak
 s=$(date +%s); bash "$P" >/tmp/cold.out; e=$(date +%s)
 [ $((e-s)) -le 2 ] && ok cold-fast || no cold-fast "$((e-s))s"
 head -1 /tmp/cold.out | grep -q '⏱ …' && ok cold-placeholder || no cold-placeholder "$(head -1 /tmp/cold.out)"
-sleep 75
+for _ in $(seq 1 60); do [ -s "$C" ] && break; sleep 5; done
 [ -s "$C" ] && ok background-refresh || no background-refresh "cache not written"
 
 # 5. warm run fast and well-formed
