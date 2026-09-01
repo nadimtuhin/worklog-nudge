@@ -27,7 +27,9 @@ threshold it collapses to a plain grey `⏱` and gets out of your way.
 ## What it does
 
 - **Elapsed time since your last worklog**, measured from `started + timeSpentSeconds`
-  of your most recent slice — not from when that slice began.
+  of your most recent slice — not from when that slice began. Clamped to
+  `WORKDAY_START`, so a morning with nothing logged reads `4h12`, not `19h` of
+  mostly sleep.
 - **Your sprint tickets**, each with logged vs. estimated hours. Click one to open it.
 - **Per-day breakdown** for the last 7 days and for the current sprint so far,
   including the days you logged nothing.
@@ -96,6 +98,7 @@ a tighter loop. The interval is the only scheduler; there is no cron or launchd.
 | `ALERT_MAX_PER_DAY` | `3` | how many notifications a day, at most |
 | `ALERT_LAST_HOUR` | `20` | no notifications after this hour |
 | `MAX_ROWS` | `5` | tickets shown inline; the rest go in a submenu |
+| `WORKDAY_START` | `09:00` | elapsed never counts back past this time today |
 | `LOG_COMMAND` | — | see *Custom logging* |
 
 `JIRA_EMAIL` matters more than it looks: a ticket's worklog array holds *every*

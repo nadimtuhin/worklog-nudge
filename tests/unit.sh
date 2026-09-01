@@ -34,6 +34,13 @@ echo "$o" | grep -q '^Sprint 1h30 of 2h estimated$' && ok sprint-totals || no sp
 echo "$o" | grep -q 'Refresh | refresh=true' && ok refresh-row || no refresh-row ""
 echo "$o" | grep -q 'Quit SwiftBar' && ok quit-row || no quit-row ""
 
+WORKDAY_START=09:00
+ds=$(date -j -f '%Y-%m-%d %H:%M' "$(date +%Y-%m-%d) 09:00" +%s)
+yesterday_evening=$(( ds - 16 * 3600 ))
+[ "$(render "$yesterday_evening" 0 $'BX-1\tx\t0\t0' | head -1)" = "⏱ $(hhmm $(( $(date +%s) - ds )))" ] && ok clamps-overnight || no clamps-overnight "not clamped"
+render "$yesterday_evening" 0 $'BX-1\tx\t0\t0' | grep -q 'unlogged since 09:00' && ok clamp-label || no clamp-label "label not clamped"
+[ "$(render $(( $(date +%s) - 600 )) 0 $'BX-1\tx\t0\t0' | head -1)" = "⏱ | color=#808080" ] && ok no-clamp-today || no no-clamp-today "clamped a same-day slice"
+
 y=$(date -v-1d +%Y-%m-%d); t=$(date +%Y-%m-%d)
 ds=$(printf '%s\t3600\n' "$y")
 o2=$(day_submenu "Last 2" "$y" "$ds")
